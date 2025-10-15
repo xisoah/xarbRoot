@@ -1,0 +1,146 @@
+# Deploy static site to /var/www/xarb.me on every run
+# then mirror Azure → GitHub (xarbRoot).
+
+trigger:
+  branches:
+    include: ['*']          # every commit on any branch
+pr:
+  branches:
+    include: ['*']
+
+# -------- Variables you can override in Pipeline variables UI --------
+variables:
+  SITE_SRC: '$(Build.SourcesDirectory)'
+  SITE_TARGET: '/var/www/xarb.me'
+  # GitHub mirror settings
+  GITHUB_OWNER: 'xisoah'   # e.g., imsohail13 or xarblabs
+  GITHUB_REPO:  'xarbRoot'
+  GITHUB_USERNAME: 'xarb-ci'       # for HTTPS auth
+
+stages:
+
+# ---------- BUILD (package the static files) ----------
+- stage: Build
+  jobs:
+  - job: Build
+    pool: { name: Default }
+    steps:
+    - checkout: self
+      fetchDepth: 0
+
+    # Package everything except common junk (adjust to taste)
+    - script: |
+        set -euxo pipefail
+        mkdir -p pkg
+        rsync -a \
+          --delete \
+          --exclude '.git' \
+          --exclude '.azure-pipelines' \
+          --exclude 'node_modules' \
+          --exclude '.next' \
+          --exclude 'dist' \
+          "$(SITE_SRC)/" pkg/
+        tar -C pkg -czf site.tar.gz .
+      displayName: "Package static site"
+
+    - task: PublishPipelineArtifact@1
+      inputs:
+        artifact: site
+        targetPath: site.tar.gz
+      displayName: "Publish artifact 'site'"
+
+# ---------- DEPLOY (copy to /var/www/xarb.me and reload nginx) ----------
+- stage: Deploy
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: ToServer
+    pool: { name: Default }
+    environment: 'prod'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: DownloadPipelineArtifact@2
+            inputs:
+              artifact: site
+              path: '$(Pipeline.Workspace)'
+
+          - script: |
+              set -euxo pipefail
+
+              # Make sure new files default to 644/755
+              umask 022
+
+              # Unpack to a temp dir
+              TMPDIR="$(Pipeline.Workspace)/deploy"
+              rm -rf "$TMPDIR"
+              mkdir -p "$TMPDIR"
+              tar -xzf "$(Pipeline.Workspace)/site.tar.gz" -C "$TMPDIR"
+
+              # Target dir should already be writable for the agent via setfacl
+              mkdir -p "$(SITE_TARGET)"
+
+              # Sync (no sudo). Ensure perms are readable by nginx:
+              #  - directories: 755
+              #  - files:       644
+              rsync -a --delete \
+                --chmod=D755,F644 \
+                "$TMPDIR"/ "$(SITE_TARGET)"/
+
+              echo "✅ Deployed to $(SITE_TARGET) without sudo"
+            displayName: "Deploy to /var/www/xarb.me"
+
+
+# ---------- MIRROR TO GITHUB (full sync after successful build) ----------
+- stage: Mirror_GitHub
+  displayName: "Mirror Azure → GitHub"
+  dependsOn: Build
+  condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
+  jobs:
+  - job: Mirror
+    displayName: "Push branches & tags to GitHub"
+    pool: { name: Default }
+    steps:
+    - checkout: self
+      fetchDepth: 0
+      persistCredentials: true
+
+    - script: |
+        set -euo pipefail
+
+        # Azure variables expand like $(NAME) in the script text.
+        # We'll also export them so we can use ${NAME} safely.
+        export GITHUB_OWNER="$(GITHUB_OWNER)"
+        export GITHUB_REPO="$(GITHUB_REPO)"
+        export GITHUB_USERNAME="$(GITHUB_USERNAME)"
+
+        git config user.name  "${GITHUB_USERNAME}"
+        git config user.email "ci@xarb.me"
+
+        # 1) Fresh view of origin (Azure source of truth)
+        git -c http.extraHeader="Authorization: Bearer $(System.AccessToken)" \
+            fetch --prune --tags origin
+
+        # 2) Wire GitHub remote using PAT (username can be anything)
+        git remote remove github 2>/dev/null || true
+
+        # Show the target (without the token) for sanity
+        echo "Target: https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git"
+
+        git remote add github "https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_OWNER}/${GITHUB_REPO}.git"
+
+        # 3) Push ALL branches origin/* → heads/*
+        while IFS= read -r BR; do
+          echo "Pushing branch ${BR}"
+          git push github "+refs/remotes/origin/${BR}:refs/heads/${BR}"
+        done < <(git for-each-ref --format='%(refname:strip=3)' refs/remotes/origin/)
+
+        # 4) Push all tags
+        git push github +refs/tags/*:refs/tags/* --prune || true
+
+        echo "✅ Mirror complete."
+      displayName: "Mirror branches & tags"
+      env:
+        # Only the token must be passed via env (so ${GITHUB_TOKEN} works)
+        GITHUB_TOKEN: $(GITHUB_TOKEN)

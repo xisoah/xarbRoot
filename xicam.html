@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en-US">
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="style.css">
+    <title>$ xicam | xarb.me</title>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <a id="a-title" href="/">
+          <h1>xarb.me</h1>
+        </a>
+        <h2> cyberhome of xarb AKA carbogen-chemist | xisoah </h2>
+      </div>
+    </header>
+    <div class="container">
+      <section id="main_content">
+        <h2 id="-whoami">$ XiCam | Xi to the world</h2>
+<div class="container">
+    <script src="https://cdn.bootcss.com/flv.js/1.5.0/flv.min.js"></script>
+    <video width="720" height="405" id="videoElement1" autoplay muted></video>
+    <script>
+      if (flvjs.isSupported()) {
+          var videoElement1 = document.getElementById('videoElement1');
+          var flvPlayer1 = flvjs.createPlayer({
+              type: 'flv',
+              url: 'https://xarb.me:8443/eagle/live.flv'
+          });
+          flvPlayer1.attachMediaElement(videoElement1);
+          flvPlayer1.load();
+          flvPlayer1.play();
+      }
+  </script>
+    </div>
+        <p>Not gonna lie, this one was really disappointing. It's 2023, I don't get it. We live 
+in a time where NLPs are getting better than ever, biometric failsafes for fido 
+over passwords, tailorised advertisements based on data collected by robotic vaccum 
+cleaners but yet no native RTSP to browser support(?)</p>
+        <pre>
+Snippet here.
+        </pre>
+    </div>
+
+  </body>
+</html>
