@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Blogs | xarb.me</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <a href="/" id="a-title" style="text-decoration: none; color: inherit">
+          <h1>xarb.me</h1>
+        </a>
+        <h2>blog / webserver setup</h2>
+      </header>
+
+      <article class="post">
+        <h1>How I set up my webserver</h1>
+        <div class="muted">Oct 26, 2025 • notes from xisoah</div>
+        <div class="block" style="margin-top: 12px">
+          <p>
+            I’ve been running my own webserver at <code>xarb.me</code> for a
+            while — here’s a simple breakdown of the stack:
+          </p>
+          <ul>
+            <li>Ubuntu + NGINX reverse proxy</li>
+            <li>Systemd for service control</li>
+            <li>Let’s Encrypt (certbot) for SSL</li>
+            <li>
+              Static HTML files served from <code>/srv/</code> via symlinked
+              releases
+            </li>
+          </ul>
+          <p>
+            To deploy a new version, I just untar a release into
+            <code>/srv/yourproject/releases/N</code> and update
+            <code>current</code> → that’s it.
+          </p>
+        </div>
+
+        <p style="margin-top: 10px"><a href="/">← Back to home</a></p>
+      </article>
+    </div>
+  </body>
+</html>

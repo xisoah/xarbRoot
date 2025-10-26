@@ -151,3 +151,19 @@ pre {
   border: 1px solid var(--border);
   margin-bottom: 10px;
 }
+.blog-list ul {
+  margin: 6px 0 0;
+  padding-left: 0;
+  list-style: none;
+}
+.blog-list li {
+  margin: 10px 0;
+}
+.blog-list li .muted {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+}
+.post .block {
+  max-width: 800px;
+}

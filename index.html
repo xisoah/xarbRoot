@@ -127,6 +127,16 @@
         <div>
           <div class="line">
             <span class="prompt">$</span>
+            <h2 style="margin: 0">blog</h2>
+          </div>
+          <div class="block blog-list" id="blogList">
+            <!-- JS will inject posts here -->
+            <div class="muted">Loading posts…</div>
+          </div>
+        </div>
+        <div>
+          <div class="line">
+            <span class="prompt">$</span>
             <h2 style="margin: 0">ls</h2>
           </div>
           <div class="block">
@@ -155,6 +165,33 @@
         </div>
       </section>
     </div>
+    <script>
+      (async function () {
+        try {
+          const res = await fetch("/posts.json", { cache: "no-cache" });
+          const posts = await res.json();
+          const container = document.getElementById("blogList");
+          if (!posts.length) {
+            container.innerHTML = '<div class="muted">No posts yet</div>';
+            return;
+          }
+          // sort by date desc
+          posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+          container.innerHTML =
+            "<ul>" +
+            posts
+              .map(
+                (p) =>
+                  `<li><a href="${p.url}">${p.title}</a> <span class="muted">• ${p.date}</span><div class="muted">${p.excerpt}</div></li>`
+              )
+              .join("") +
+            "</ul>";
+        } catch (e) {
+          document.getElementById("blogList").innerHTML =
+            '<div class="muted">Could not load posts</div>';
+        }
+      })();
+    </script>
     <script>
       (function () {
         const btn = document.getElementById("copyKeyBtn");
